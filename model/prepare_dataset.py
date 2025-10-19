@@ -90,6 +90,10 @@ def main() -> None:
     # Process
     df_train_p, df_test_p = process(df_train, df_test)
 
+    # Check missing values
+    print("Missing values (train):", df_train_p.isna().sum().sum())
+    print("Missing values (test):", df_test_p.isna().sum().sum())
+
     # Save
     df_train_p.to_csv(OUTPUT_TRAIN_PATH, index=False)
     df_test_p.to_csv(OUTPUT_TEST_PATH, index=False)

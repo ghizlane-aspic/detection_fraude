@@ -53,6 +53,9 @@ logs/
 # Ignore all CSVs in data except the 10-row sample
 /data/*.csv
 !/data/fraudTrain_sample10.csv
+!/data/fraudTrain_processed.csv
+!/data/fraudTest_processed.csv
+
 # Ignore common columnar formats
 /data/**/*.parquet
 /data/**/*.feather
