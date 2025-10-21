@@ -1,347 +1,335 @@
-# app.py - INTERFACE MODERNE SANS "ACCUEIL"
+# app.py - INTERFACE ULTRA MODERNE (VERSION CORRIGÉE)
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # Configuration de la page
 st.set_page_config(
-    page_title="FraudShield - Détection Intelligente",
+    page_title="FraudShield AI",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# CSS PERSONNALISÉ MODERNE
+# CSS ULTRA MODERNE
 st.markdown("""
 <style>
-    /* Styles généraux */
+    /* Reset et styles généraux */
     .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        color: white;
     }
     
-    .main-header {
-        font-size: 3.5rem;
-        color: white;
+    /* Header néon */
+    .neon-header {
+        font-size: 4rem;
+        font-weight: 800;
         text-align: center;
-        margin-bottom: 1rem;
-        font-weight: 700;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        background: linear-gradient(45deg, #00f2fe, #4facfe, #00f2fe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+        animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+        from { text-shadow: 0 0 20px rgba(79, 172, 254, 0.5); }
+        to { text-shadow: 0 0 30px rgba(79, 172, 254, 0.8), 0 0 40px rgba(79, 172, 254, 0.6); }
     }
     
     .sub-header {
-        font-size: 1.5rem;
-        color: #f8f9fa;
+        font-size: 1.3rem;
+        color: #a8b2d1;
         text-align: center;
         margin-bottom: 3rem;
         font-weight: 300;
+        letter-spacing: 2px;
     }
     
-    /* Cartes modernes */
-    .modern-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 1rem 0;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .mission-card {
-        background: linear-gradient(135deg, #1a237e, #000051);
-        color: white;
-        border-radius: 20px;
-        padding: 3rem;
-        margin: 2rem 0;
-        text-align: center;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    }
-    
-    .feature-card {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-        height: 100%;
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .stats-card {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        text-align: center;
-    }
-    
-    /* Boutons modernes */
-    .stButton button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 25px;
-        font-weight: 600;
+    /* Cartes en verre */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 2.5rem;
+        margin: 1.5rem 0;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         transition: all 0.3s ease;
     }
     
-    .stButton button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
     }
     
-    /* Navigation */
-    .nav-container {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        padding: 1rem;
+    /* Bouton cyber */
+    .cyber-button {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        border: none;
+        padding: 1.2rem 3rem;
         border-radius: 15px;
-        margin-bottom: 2rem;
-    }
-    
-    /* Texte mission */
-    .mission-title {
-        font-size: 2.5rem;
         font-weight: 700;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
     }
     
-    .mission-subtitle {
-        font-size: 1.8rem;
-        font-weight: 300;
-        margin-bottom: 2rem;
-        opacity: 0.9;
+    .cyber-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s;
     }
     
-    .mission-text {
-        font-size: 1.2rem;
-        line-height: 1.6;
-        opacity: 0.8;
-        max-width: 800px;
-        margin: 0 auto;
+    .cyber-button:hover::before {
+        left: 100%;
+    }
+    
+    .cyber-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+    }
+    
+    /* Métriques modernes */
+    .metric-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+        border-radius: 20px;
+        padding: 1.5rem;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+        transform: translateY(-3px);
+    }
+    
+    /* Typographie moderne */
+    .section-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #00f2fe, #4facfe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-text {
+        color: #a8b2d1;
+        line-height: 1.7;
+        font-size: 1.1rem;
+    }
+    
+    /* Icônes animées */
+    .icon-pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
     }
 </style>
 """, unsafe_allow_html=True)
 
-# HEADER HÉROÏQUE
-col1, col2, col3 = st.columns([1,2,1])
+# HEADER CYBERPUNK
+col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
-    st.markdown('<h1 class="main-header">🛡️ FraudShield</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Détection Intelligente de Fraudes Financières</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="neon-header">🛡️ FRAUDSHIELD AI</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">INTELLIGENCE ARTIFICIELLE • DÉTECTION EN TEMPS RÉEL • SÉCURITÉ AVANCÉE</p>', unsafe_allow_html=True)
 
-# NAVIGATION MODERNE
-st.markdown('<div class="nav-container">', unsafe_allow_html=True)
-nav_col1, nav_col2, nav_col3 = st.columns(3)
-
-with nav_col1:
-    if st.button("📊 Tableau de Bord", use_container_width=True):
-        st.session_state.page = "dashboard"
-
-with nav_col2:
-    if st.button("🔍 Analyser", use_container_width=True):
-        st.session_state.page = "analyze"
-
-with nav_col3:
-    if st.button("📈 Statistiques", use_container_width=True):
-        st.session_state.page = "stats"
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# SECTION NOTRE MISSION - CENTRÉE ET MODERNE
+# BOUTON PRINCIPAL CYBER
 st.markdown("""
-<div class="mission-card">
-    <div class="mission-title">Notre Mission</div>
-    <div class="mission-subtitle">Protection Financière Intelligente</div>
-    <div class="mission-text">
-        Nous nous engageons à protéger chaque transaction financière grâce à l'intelligence artificielle de pointe, 
-        en détectant et prévenant les fraudes en temps réel pour assurer la sécurité de votre business.
-    </div>
+<div style='text-align: center; margin: 3rem 0;'>
+    <h2 style='color: #a8b2d1; font-weight: 300; margin-bottom: 1.5rem;'>PRÊT À DÉCLENCHER L'ANALYSE ?</h2>
 </div>
 """, unsafe_allow_html=True)
 
-# CONTENU PRINCIPAL
-if 'page' not in st.session_state:
-    st.session_state.page = "dashboard"
+col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+with col_btn2:
+    if st.button(" DÉMARRER LA DÉTECTION IA", use_container_width=True, key="main_cta"):
+        st.switch_page("pages/prediction.py")
 
-if st.session_state.page == "dashboard":
-    st.markdown('<div class="modern-card">', unsafe_allow_html=True)
-    st.markdown("## 📊 **Tableau de Bord en Temps Réel**")
-    
-    # Métriques en temps réel
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Transactions Aujourd'hui", "1,247", "+5.2%")
-    
-    with col2:
-        st.metric("Fraudes Détectées", "8", "-2.1%")
-    
-    with col3:
-        st.metric("Taux de Détection", "99.1%", "+0.3%")
-    
-    with col4:
-        st.metric("Temps Moyen", "47ms", "-3ms")
-    
-    # Graphiques du tableau de bord
-    col_chart1, col_chart2 = st.columns(2)
-    
-    with col_chart1:
-        st.subheader("📅 Activité des 7 derniers jours")
-        daily_data = pd.DataFrame({
-            'Jour': ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-            'Transactions': [1150, 1240, 1180, 1320, 1247, 980, 760],
-            'Alertes': [12, 8, 15, 9, 8, 5, 3]
-        })
-        
-        fig_daily = px.line(daily_data, x='Jour', y=['Transactions', 'Alertes'],
-                           title='Activité Quotidienne')
-        st.plotly_chart(fig_daily, use_container_width=True)
-    
-    with col_chart2:
-        st.subheader("🎯 Répartition des Risques")
-        risk_data = pd.DataFrame({
-            'Niveau': ['Faible', 'Moyen', 'Élevé', 'Critique'],
-            'Pourcentage': [65, 25, 8, 2]
-        })
-        
-        fig_risk = px.pie(risk_data, values='Pourcentage', names='Niveau',
-                         title='Distribution des Niveaux de Risque')
-        st.plotly_chart(fig_risk, use_container_width=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+# SECTION MÉTRIQUES EN TEMPS RÉEL
+st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+st.markdown('<h2 class="section-title"> DASHBOARD LIVE</h2>', unsafe_allow_html=True)
 
-elif st.session_state.page == "analyze":
-    st.markdown('<div class="modern-card">', unsafe_allow_html=True)
-    st.markdown("## 🔍 **Analyse de Transaction**")
-    
-    # Formulaire moderne
-    with st.form("transaction_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("💳 Informations Transaction")
-            montant = st.number_input("Montant (€)", min_value=0.0, value=150.0, step=10.0)
-            categorie = st.selectbox("Catégorie", ["Retail", "E-commerce", "Services", "Voyage", "International"])
-            heure = st.slider("Heure de transaction", 0, 23, 14)
-            methode_paiement = st.selectbox("Méthode de paiement", ["Carte", "Virement", "Mobile", "En ligne"])
-        
-        with col2:
-            st.subheader("👤 Profil Client")
-            age = st.number_input("Âge", min_value=18, max_value=100, value=35)
-            localisation = st.selectbox("Localisation", ["France", "UE", "International", "Zone à risque"])
-            historique = st.selectbox("Historique Client", ["Nouveau", "Occasionnel", "Régulier", "VIP"])
-            device = st.selectbox("Appareil", ["Mobile connu", "Nouveau mobile", "Ordinateur", "Inconnu"])
-        
-        soumettre = st.form_submit_button("🚀 Analyser la Transaction", use_container_width=True)
-        
-        if soumettre:
-            with st.spinner("🔍 Analyse en cours..."):
-                # Simulation d'analyse IA
-                import random
-                risque_score = random.randint(1, 100)
-                
-                if risque_score > 70:
-                    st.error("### ⚠️ Transaction à Risque Élevé")
-                    col_risk1, col_risk2 = st.columns(2)
-                    with col_risk1:
-                        st.metric("Score de Risque", f"{risque_score}%", delta="Élevé", delta_color="inverse")
-                    with col_risk2:
-                        st.metric("Recommandation", "Bloquer", delta="Action requise")
-                    
-                    st.warning("**Facteurs de risque détectés:** Montant élevé, Localisation suspecte, Nouvel appareil")
-                    
-                elif risque_score > 30:
-                    st.warning("### 🔄 Transaction à Risque Moyen")
-                    col_risk1, col_risk2 = st.columns(2)
-                    with col_risk1:
-                        st.metric("Score de Risque", f"{risque_score}%", delta="Moyen")
-                    with col_risk2:
-                        st.metric("Recommandation", "Vérifier", delta="Surveillance")
-                    
-                    st.info("**Recommandation:** Vérification d'identité recommandée")
-                    
-                else:
-                    st.success("### ✅ Transaction Sécurisée")
-                    col_risk1, col_risk2 = st.columns(2)
-                    with col_risk1:
-                        st.metric("Score de Risque", f"{risque_score}%", delta="Faible")
-                    with col_risk2:
-                        st.metric("Recommandation", "Approuver", delta="Sécurisée")
-                    
-                    st.info("**Statut:** Transaction conforme aux habitudes du client")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+# Métriques animées
+metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
 
-elif st.session_state.page == "stats":
-    st.markdown('<div class="modern-card">', unsafe_allow_html=True)
-    st.markdown("## 📈 **Statistiques et Analytics**")
-    
-    # Graphiques statistiques
-    col_stat1, col_stat2 = st.columns(2)
-    
-    with col_stat1:
-        st.subheader("📅 Activité Mensuelle")
-        monthly_data = pd.DataFrame({
-            'Mois': ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
-            'Transactions': [11200, 12350, 13100, 14600, 15247, 16800],
-            'Fraudes': [45, 38, 42, 28, 32, 25]
-        })
-        
-        fig_monthly = px.line(monthly_data, x='Mois', y=['Transactions', 'Fraudes'],
-                             title='Évolution Mensuelle')
-        st.plotly_chart(fig_monthly, use_container_width=True)
-    
-    with col_stat2:
-        st.subheader("🎯 Types de Fraudes")
-        fraud_types = pd.DataFrame({
-            'Type': ['Carte Clonée', 'Phishing', 'International', 'Identité Volée', 'Autre'],
-            'Count': [125, 89, 67, 42, 28]
-        })
-        
-        fig_pie = px.pie(fraud_types, values='Count', names='Type',
-                        title='Répartition des Types de Fraude')
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    # Métriques supplémentaires
-    st.subheader("📊 Performance du Système")
-    col_perf1, col_perf2, col_perf3, col_perf4 = st.columns(4)
-    
-    with col_perf1:
-        st.metric("Précision", "99.2%", "+0.4%")
-    
-    with col_perf2:
-        st.metric("Rappel", "96.8%", "+0.7%")
-    
-    with col_perf3:
-        st.metric("Taux Faux Positifs", "0.8%", "-0.2%")
-    
-    with col_perf4:
-        st.metric("Satisfaction Client", "98.5%", "+1.2%")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+with metric_col1:
+    st.markdown("""
+    <div class="metric-card">
+        <div style='font-size: 2.5rem; font-weight: 800; color: #00f2fe;'>1.2K</div>
+        <div style='color: #a8b2d1;'>TRANSACTIONS</div>
+        <div style='color: #4ade80; font-size: 0.9rem;'>↗ +5.2%</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# FOOTER PROFESSIONNEL
+with metric_col2:
+    st.markdown("""
+    <div class="metric-card">
+        <div style='font-size: 2.5rem; font-weight: 800; color: #ff6b6b;'>12</div>
+        <div style='color: #a8b2d1;'>ALERTES</div>
+        <div style='color: #f87171; font-size: 0.9rem;'>↘ -2.1%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with metric_col3:
+    st.markdown("""
+    <div class="metric-card">
+        <div style='font-size: 2.5rem; font-weight: 800; color: #4facfe;'>99.3%</div>
+        <div style='color: #a8b2d1;'>PRÉCISION</div>
+        <div style='color: #4ade80; font-size: 0.9rem;'>↗ +0.4%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with metric_col4:
+    st.markdown("""
+    <div class="metric-card">
+        <div style='font-size: 2.5rem; font-weight: 800; color: #a78bfa;'>47ms</div>
+        <div style='color: #a8b2d1;'>TEMPS MOYEN</div>
+        <div style='color: #4ade80; font-size: 0.9rem;'>↘ -3ms</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Graphiques modernes
+chart_col1, chart_col2 = st.columns(2)
+
+with chart_col1:
+    # Graphique radial moderne
+    categories = ['Transactions', 'Alertes', 'Précision', 'Vitesse']
+    fig_radar = go.Figure()
+    fig_radar.add_trace(go.Scatterpolar(
+        r=[95, 85, 99, 92],
+        theta=categories,
+        fill='toself',
+        fillcolor='rgba(79, 172, 254, 0.3)',
+        line=dict(color='#4facfe', width=3),
+        name='Performance'
+    ))
+    fig_radar.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100]),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        showlegend=False,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white'),
+        height=400
+    )
+    st.plotly_chart(fig_radar, use_container_width=True)
+
+with chart_col2:
+    # Graphique de distribution
+    risk_data = pd.DataFrame({
+        'Niveau': ['Faible', 'Moyen', 'Élevé', 'Critique'],
+        'Pourcentage': [68, 22, 8, 2],
+        'Couleur': ['#4ade80', '#fbbf24', '#f87171', '#dc2626']
+    })
+    
+    fig_bar = px.bar(risk_data, x='Niveau', y='Pourcentage', 
+                     color='Niveau', color_discrete_map=dict(zip(risk_data['Niveau'], risk_data['Couleur'])),
+                     title='DISTRIBUTION DES RISQUES')
+    
+    fig_bar.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white'),
+        showlegend=False,
+        height=400
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# SECTION FONCTIONNALITÉS AVANCÉES
+st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+st.markdown('<h2 class="section-title">⚡ TECHNOLOGIES AVANCÉES</h2>', unsafe_allow_html=True)
+
+feat_col1, feat_col2, feat_col3 = st.columns(3)
+
+with feat_col1:
+    st.markdown("""
+    <div style='text-align: center; padding: 1.5rem;'>
+        <div style='font-size: 3rem; margin-bottom: 1rem;' class="icon-pulse">🧠</div>
+        <h3 style='color: #00f2fe; margin-bottom: 1rem;'>IA PROFONDE</h3>
+        <p class="feature-text">Réseaux de neurones avancés pour une détection pattern-based avec 99.3% de précision</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with feat_col2:
+    st.markdown("""
+    <div style='text-align: center; padding: 1.5rem;'>
+        <div style='font-size: 3rem; margin-bottom: 1rem;' class="icon-pulse">⚡</div>
+        <h3 style='color: #4facfe; margin-bottom: 1rem;'>TEMPS RÉEL</h3>
+        <p class="feature-text">Analyse en 47ms avec streaming data processing et alertes instantanées</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with feat_col3:
+    st.markdown("""
+    <div style='text-align: center; padding: 1.5rem;'>
+        <div style='font-size: 3rem; margin-bottom: 1rem;' class="icon-pulse">🔒</div>
+        <h3 style='color: #a78bfa; margin-bottom: 1rem;'>CRYPTO SÉCURISÉ</h3>
+        <p class="feature-text">Chiffrement end-to-end et blockchain pour une traçabilité inviolable</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# CALL TO ACTION FINAL
+st.markdown("""
+<div style='text-align: center; margin: 4rem 0;'>
+    <h2 style='color: #a8b2d1; font-weight: 300; margin-bottom: 2rem;'>NE LAISSEZ PLUS AUCUNE FRAUDE VOUS ÉCHAPPER</h2>
+</div>
+""", unsafe_allow_html=True)
+
+col_cta1, col_cta2, col_cta3 = st.columns([1, 2, 1])
+with col_cta2:
+    if st.button("🔓 ACCÉDER AU SYSTÈME DE DÉTECTION", use_container_width=True, key="final_cta"):
+        st.switch_page("pages/prediction.py")
+
+# FOOTER CYBER
 st.markdown("---")
 footer_col1, footer_col2, footer_col3 = st.columns(3)
 
 with footer_col1:
-    st.markdown("**🛡️ FraudShield**")
-    st.markdown("Sécurité financière intelligente")
+    st.markdown("""
+    **🛡️ FRAUDSHIELD AI**  
+    *Sécurité nouvelle génération*
+    """)
 
 with footer_col2:
-    st.markdown("**📞 Support**")
-    st.markdown("contact@fraudshield.com")
+    st.markdown("""
+    **📡 SUPPORT 24/7**  
+    `security@fraudshield.ai`
+    """)
 
 with footer_col3:
-    st.markdown("**🔒 Sécurité**")
-    st.markdown("Certifié ISO 27001")
+    st.markdown("""
+    **🔐 CERTIFICATIONS**  
+    ISO 27001 • GDPR • SOC2
+    """)
 
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #666; font-size: 0.9rem;'>© 2024 FraudShield - Intelligence Artificielle pour la Sécurité Financière</div>", 
-            unsafe_allow_html=True)
+st.markdown("""
+<div style='text-align: center; color: #a8b2d1; font-size: 0.8rem; letter-spacing: 1px;'>
+    © 2024 FRAUDSHIELD AI • SYSTÈME DE DÉTECTION INTELLIGENTE • V2.4.1
+</div>
+""", unsafe_allow_html=True)
