@@ -1,8 +1,40 @@
+import sys
+import os
+
+# ✅ CORRECTION : Ajouter le chemin racine du projet
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
 import streamlit as st
-import numpy as np
 import time
-import pandas as pd
-import plotly.express as px
+
+try:
+    from backend_connector import fraud_detector
+    HAS_FRAUD_DETECTOR = True
+except ImportError as e:
+    st.error(f"❌ Erreur d'import: {e}")
+    HAS_FRAUD_DETECTOR = False
+    
+    # Création d'un simulateur de secours
+    class MockFraudDetector:
+        def __init__(self):
+            self.is_loaded = False
+            self.model_name = "Simulation"
+        
+        def predict(self, data):
+            return {
+                'success': True,
+                'is_fraud': False,
+                'fraud_probability': 0.1,
+                'risk_score': 15,
+                'model_used': 'Simulation',
+                'risk_factors': []
+            }
+    
+    fraud_detector = MockFraudDetector()
+
+# Le reste de votre code Streamlit reste identique...
+# [Votre CSS et interface utilisateur existants]
 
 # CSS UNIFIÉ AVEC ANIMATIONS
 st.markdown("""
@@ -188,6 +220,14 @@ st.markdown("""
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
+    
+    .model-info {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -201,13 +241,18 @@ with col_back:
 st.markdown('<h1 class="page-title">🔍 Analyse de Transactions</h1>', unsafe_allow_html=True)
 
 # ==================== DESCRIPTION ====================
-st.markdown("""
+model_status = "✅ Actif" if (HAS_FRAUD_DETECTOR and fraud_detector.is_loaded) else "🔄 Simulation"
+model_name = fraud_detector.model_name if HAS_FRAUD_DETECTOR else "Simulation"
+
+st.markdown(f"""
 <div class="card">
     <h2 style="color: #2c3e50; text-align: center; margin-bottom: 1rem;">Analysez vos transactions en temps réel</h2>
     <p style="color: #7f8c8d; text-align: center; font-size: 1.1rem; line-height: 1.6;">
         Notre Intelligence Artificielle analyse instantanément chaque transaction pour détecter 
         les fraudes potentielles. Remplissez le formulaire ci-dessous et obtenez un résultat en moins de 2 secondes !
     </p>
+    
+  
 </div>
 """, unsafe_allow_html=True)
 
@@ -311,7 +356,7 @@ with st.form("transaction_form"):
         st.markdown('<div class="input-group">', unsafe_allow_html=True)
         city = st.text_input(
             "🏙️ Ville",
-            value="Paris",
+            value="Tanger",
             help="Ville où la transaction a lieu"
         )
         st.markdown('</div>', unsafe_allow_html=True)
@@ -371,64 +416,104 @@ if submitted:
         # Simulation du temps d'analyse
         progress_bar = st.progress(0)
         for percent_complete in range(100):
-            time.sleep(0.02)
+            time.sleep(0.01)
             progress_bar.progress(percent_complete + 1)
     
-    # ========== CALCUL DU RISQUE ==========
-    risk_score = 0
-    risk_factors = []
+    # ========== UTILISATION DU MODÈLE IA ==========
+    input_data = {
+        'amount': amount,
+        'merchant': merchant,
+        'category': category,
+        'gender': gender,
+        'age': age,
+        'job': job,
+        'city': city,
+        'distance': distance,
+        'trans_hour': trans_hour,
+        'is_weekend': is_weekend
+    }
     
-    # Facteur 1 : Montant
-    if amount > 2000:
-        risk_score += 35
-        risk_factors.append("💰 Montant très élevé (>2000€)")
-    elif amount > 1000:
-        risk_score += 20
-        risk_factors.append("💸 Montant élevé (1000-2000€)")
-    elif amount > 500:
-        risk_score += 10
-        risk_factors.append("📈 Montant supérieur à la moyenne")
+    # Appel au modèle (réel ou simulation)
+    result = fraud_detector.predict(input_data)
     
-    # Facteur 2 : Heure
-    if trans_hour < 6:
-        risk_score += 25
-        risk_factors.append("🌙 Transaction très tôt (avant 6h)")
-    elif trans_hour > 22:
-        risk_score += 20
-        risk_factors.append("🌜 Transaction tardive (après 22h)")
+    # Variables pour l'affichage
+    use_simulation = not HAS_FRAUD_DETECTOR or not result.get('success', False)
     
-    # Facteur 3 : Distance
-    if distance > 500:
-        risk_score += 30
-        risk_factors.append("✈️ Très loin du domicile (>500km)")
-    elif distance > 100:
-        risk_score += 20
-        risk_factors.append("🚗 Loin du domicile (100-500km)")
-    elif distance > 50:
-        risk_score += 10
-        risk_factors.append("📍 Distance modérée")
+    # Gestion des erreurs
+    if not result.get('success', False):
+        if not use_simulation:
+            st.error(f"❌ {result.get('error', 'Erreur inconnue du modèle')}")
+            st.info("💡 Utilisation du mode simulation en attendant...")
+        use_simulation = True
     
-    # Facteur 4 : Catégorie
-    if category in ["En ligne", "Voyage"]:
-        risk_score += 15
-        risk_factors.append(f"🎯 Catégorie {category} (risque élevé)")
-    elif category in ["Loisirs", "Shopping/Vêtements"]:
-        risk_score += 8
-        risk_factors.append(f"🛍️ Catégorie {category} (risque modéré)")
-    
-    # Facteur 5 : Combinaisons
-    if is_weekend and (trans_hour < 6 or trans_hour > 22):
-        risk_score += 15
-        risk_factors.append("🎭 Week-end + heures inhabituelles")
-    
-    if amount > 500 and distance > 50:
-        risk_score += 12
-        risk_factors.append("⚡ Montant élevé + distance")
-    
-    # Calcul final
-    probability = min(risk_score / 100, 0.99)
-    is_fraud = probability > 0.5
-    
+    # ========== MODE SIMULATION (fallback) ==========
+    if use_simulation:
+        risk_score = 0
+        risk_factors = []
+        
+        # Facteur 1 : Montant
+        if amount > 2000:
+            risk_score += 35
+            risk_factors.append("💰 Montant très élevé (>2000€)")
+        elif amount > 1000:
+            risk_score += 20
+            risk_factors.append("💸 Montant élevé (1000-2000€)")
+        elif amount > 500:
+            risk_score += 10
+            risk_factors.append("📈 Montant supérieur à la moyenne")
+        
+        # Facteur 2 : Heure
+        if trans_hour < 6:
+            risk_score += 25
+            risk_factors.append("🌙 Transaction très tôt (avant 6h)")
+        elif trans_hour > 22:
+            risk_score += 20
+            risk_factors.append("🌜 Transaction tardive (après 22h)")
+        
+        # Facteur 3 : Distance
+        if distance > 500:
+            risk_score += 30
+            risk_factors.append("✈️ Très loin du domicile (>500km)")
+        elif distance > 100:
+            risk_score += 20
+            risk_factors.append("🚗 Loin du domicile (100-500km)")
+        elif distance > 50:
+            risk_score += 10
+            risk_factors.append("📍 Distance modérée")
+        
+        # Facteur 4 : Catégorie
+        if category in ["En ligne", "Voyage"]:
+            risk_score += 15
+            risk_factors.append(f"🎯 Catégorie {category} (risque élevé)")
+        elif category in ["Loisirs", "Shopping/Vêtements"]:
+            risk_score += 8
+            risk_factors.append(f"🛍️ Catégorie {category} (risque modéré)")
+        
+        # Facteur 5 : Combinaisons
+        if is_weekend and (trans_hour < 6 or trans_hour > 22):
+            risk_score += 15
+            risk_factors.append("🎭 Week-end + heures inhabituelles")
+        
+        if amount > 500 and distance > 50:
+            risk_score += 12
+            risk_factors.append("⚡ Montant élevé + distance")
+        
+        # Calcul final simulation
+        probability = min(risk_score / 100, 0.99)
+        is_fraud = probability > 0.5
+        model_used = "Simulation"
+        
+    else:
+        # Utiliser les vrais résultats du modèle
+        is_fraud = result['is_fraud']
+        probability = result['fraud_probability']
+        risk_score = result['risk_score']
+        model_used = result['model_used']
+        risk_factors = result.get('risk_factors', [])
+        
+        # Afficher info modèle utilisé
+        st.success(f"✅ Analyse réalisée avec le modèle **{model_used}**")
+
     # ========== AFFICHAGE DES RÉSULTATS ==========
     st.markdown("---")
     st.markdown("## 📊 Résultats de l'Analyse")
@@ -515,9 +600,10 @@ if submitted:
         st.markdown("###")
         
         # Facteurs de risque
-        st.markdown("#### 🔍 Facteurs de Risque Identifiés")
-        for factor in risk_factors:
-            st.markdown(f'<div class="risk-factor">{factor}</div>', unsafe_allow_html=True)
+        if risk_factors:
+            st.markdown("#### 🔍 Facteurs de Risque Identifiés")
+            for factor in risk_factors:
+                st.markdown(f'<div class="risk-factor">{factor}</div>', unsafe_allow_html=True)
         
         st.markdown("###")
         
@@ -594,22 +680,22 @@ if submitted:
         
         st.markdown("###")
         
-        # Message de confirmation
+        # Message de confirmation (CORRIGÉ : <u1> → <ul>)
         st.markdown("""
         <div class="card">
             <h3 style="color: #2c3e50; margin-top: 0;">✅ Analyse Positive</h3>
             <p style="color: #7f8c8d; font-size: 1.1rem; line-height: 1.6;">
                 Notre système IA n'a détecté aucun pattern suspect dans cette transaction. 
                 Tous les paramètres analysés correspondent à un comportement d'achat normal.
+                Actions Recommandées :
             </p>
             
-            <h4 style="color: #2c3e50; margin-top: 1.5rem;">📋 Actions Recommandées :</h4>
-            <ul style="color: #7f8c8d; line-height: 1.8;">
-                <li>✓ <b>Approuver</b> la transaction automatiquement</li>
-                <li>✓ <b>Aucune vérification</b> supplémentaire requise</li>
-                <li>✓ <b>Continuer</b> la surveillance normale</li>
-                <li>✓ <b>Mettre à jour</b> les patterns comportementaux</li>
-            </ul>
+<ul style="color: #7f8c8d; line-height: 1.8;">
+    <li>✓ <b>Approuver</b> la transaction automatiquement</li>
+    <li>✓ <b>Aucune vérification</b> supplémentaire requise</li>
+    <li>✓ <b>Continuer</b> la surveillance normale</li>
+    <li>✓ <b>Mettre à jour</b> les patterns comportementaux</li>
+</ul>
         </div>
         """, unsafe_allow_html=True)
         
@@ -634,11 +720,6 @@ if submitted:
     with col_new2:
         if st.button("🔄 Nouvelle Analyse", use_container_width=True):
             st.rerun()
-
-# ==================== BOUTON RETOUR FINAL ====================
-st.markdown("---")
-if st.button("⬅️ Retour au Tableau de Bord", use_container_width=True):
-    st.switch_page("app.py")
 
 # ==================== FOOTER ====================
 st.markdown("---")
