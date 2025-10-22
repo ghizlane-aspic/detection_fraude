@@ -15,7 +15,7 @@ class FraudDetector:
         self.is_loaded = False
         self.model = None
         self.model_name = "Random Forest"
-        self.backend_url = "http://localhost:5000/predict"
+        self.backend_url = "http://127.0.0.1:8000/predict"  # ✅ CHANGÉ le port
         self.timeout = 30
         
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -59,16 +59,43 @@ class FraudDetector:
         """Prépare les données dans le format EXACT attendu par le backend"""
         now = datetime.now()
         
-        # Données par défaut pour les champs manquants
+        # Mapping des catégories vers le format backend
+        category_mapping = {
+            "Supermarché": "grocery_pos",
+            "Restaurant": "food_dining", 
+            "Essence": "gas_transport",
+            "Shopping/Vêtements": "shopping_pos",
+            "Pharmacie": "health_fitness",
+            "Transport": "travel",
+            "Loisirs": "entertainment",
+            "En ligne": "shopping_net",
+            "Voyage": "travel",
+            "Autre": "misc_pos"
+        }
+        
+        # Mapping genre
+        gender_mapping = {"Homme": "M", "Femme": "F"}
+        
+        # Mapping professions
+        job_mapping = {
+            "Employé": "Technician",
+            "Cadre": "Executive", 
+            "Commerçant": "Entrepreneur",
+            "Retraité": "Retired",
+            "Étudiant": "Student",
+            "Autre": "Other"
+        }
+        
+        # Données dans le format EXACT du backend
         backend_data = {
-            'cc_num': 1234567890123456,  # Valeur par défaut
-            'merchant': str(input_data['merchant']),
-            'category': str(input_data['category']),
-            'gender': str(input_data['gender']),
+            'cc_num': 4212345678901234,  # ✅ Format correct
+            'merchant': f"fraud_{input_data['merchant'].replace(' ', '_')}",  # ✅ Format merchant
+            'category': category_mapping.get(input_data['category'], "misc_pos"),  # ✅ Catégorie format backend
+            'gender': gender_mapping.get(input_data['gender'], "M"),  # ✅ M/F
             'city': str(input_data['city']),
-            'state': 'CA',  # Valeur par défaut
-            'city_pop': 50000,  # Valeur par défaut
-            'job': str(input_data['job']),
+            'state': 'NY',  # ✅ State code
+            'city_pop': 500000,  # ✅ Population réaliste
+            'job': job_mapping.get(input_data['job'], "Other"),  # ✅ Job en anglais
             'unix_time': int(now.timestamp()),
             'age': int(input_data['age']),
             'dist_home_merch': float(input_data['distance']),
@@ -111,35 +138,40 @@ class FraudDetector:
             # Préparer les données dans le format EXACT du backend
             transaction_data = self._prepare_backend_data(input_data)
             
-            # STRUCTURE CORRECTE pour le backend
-            request_data = {
-                'transaction': transaction_data,
-                'metadata': {
-                    'request_id': f'req_{int(datetime.now().timestamp())}',
-                    'timestamp': datetime.now().isoformat(),
-                    'version': '1.0'
-                }
-            }
-            
+            # ✅ ENVOYER DIRECTEMENT les données de transaction SANS wrapper
             print("📤 Envoi des données au backend...")
-            print(f"🔧 Données envoyées: {json.dumps(request_data, indent=2, default=str)}")
+            print(f"🔧 Données envoyées: {json.dumps(transaction_data, indent=2, default=str)}")
             
             response = requests.post(
                 self.backend_url,
-                json=request_data,
+                json=transaction_data,  # ✅ ENVOYER DIRECTEMENT les données
+                headers={"Content-Type": "application/json"},  # ✅ Headers explicites
                 timeout=self.timeout
             )
             
             if response.status_code == 200:
                 result = response.json()
                 print(f"✅ Réponse du backend: {result}")
+                
+                # ✅ ADAPTER au format que votre frontend attend
+                is_fraud = result.get('is_fraud', False)
+                fraud_probability = result.get('fraud_probability', 0.0)
+                message = result.get('message', '')
+                
+                # Calculer le risk_score à partir de la probabilité
+                risk_score = int(fraud_probability * 100)
+                
+                # Identifier les facteurs de risque basés sur le message
+                risk_factors = self._extract_risk_factors(message, input_data)
+                
                 return {
                     'success': True,
-                    'is_fraud': result.get('is_fraud', False),
-                    'fraud_probability': float(result.get('fraud_probability', 0.0)),
-                    'risk_score': int(result.get('risk_score', 0)),
-                    'model_used': result.get('model_used', 'Backend API'),
-                    'risk_factors': result.get('risk_factors', [])
+                    'is_fraud': is_fraud,
+                    'fraud_probability': float(fraud_probability),
+                    'risk_score': risk_score,
+                    'model_used': 'Backend API',
+                    'risk_factors': risk_factors,
+                    'backend_message': message
                 }
             else:
                 print(f"❌ Erreur backend HTTP {response.status_code}: {response.text}")
@@ -154,6 +186,25 @@ class FraudDetector:
         except Exception as e:
             print(f"❌ Erreur API: {e}")
             return {'success': False, 'error': f'Erreur API: {str(e)}'}
+    
+    def _extract_risk_factors(self, message, input_data):
+        """Extrait les facteurs de risque du message backend"""
+        risk_factors = []
+        
+        # Analyser le message pour identifier les risques
+        if "suspect" in message.lower() or "risque" in message.lower():
+            amount = input_data['amount']
+            distance = input_data['distance']
+            category = input_data['category']
+            
+            if amount > 1000:
+                risk_factors.append("💰 Montant élevé")
+            if distance > 100:
+                risk_factors.append("🚗 Distance importante")
+            if category in ["En ligne", "Voyage"]:
+                risk_factors.append(f"🎯 Catégorie à risque: {category}")
+        
+        return risk_factors
     
     def _try_local_prediction(self, input_data):
         """Tente une prédiction avec le modèle local"""
