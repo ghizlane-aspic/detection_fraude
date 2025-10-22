@@ -3,6 +3,7 @@ import pickle
 import requests
 import json
 from datetime import datetime
+import math
 
 try:
     import numpy as np
@@ -53,35 +54,33 @@ class FraudDetector:
         except Exception as e:
             print(f"❌ Erreur lors du chargement du modèle: {e}")
             self.is_loaded = False
-    
-    def _prepare_features(self, input_data):
-        """Prépare les features pour la prédiction (identique au backend)"""
-        # Mapping cohérent avec ce que le backend attend
-        category_mapping = {
-            "Supermarché": 0, "Restaurant": 1, "Essence": 2,
-            "Shopping/Vêtements": 3, "Pharmacie": 4, "Transport": 5,
-            "Loisirs": 6, "En ligne": 7, "Voyage": 8, "Autre": 9
-        }
+
+    def _prepare_backend_data(self, input_data):
+        """Prépare les données dans le format EXACT attendu par le backend"""
+        now = datetime.now()
         
-        job_mapping = {
-            "Employé": 0, "Cadre": 1, "Commerçant": 2,
-            "Retraité": 3, "Étudiant": 4, "Autre": 5
-        }
-        
-        gender_mapping = {"Homme": 0, "Femme": 1}
-        
-        features = {
-            'amount': float(input_data['amount']),
-            'category': category_mapping.get(input_data['category'], 9),
-            'gender': gender_mapping.get(input_data['gender'], 0),
+        # Données par défaut pour les champs manquants
+        backend_data = {
+            'cc_num': 1234567890123456,  # Valeur par défaut
+            'merchant': str(input_data['merchant']),
+            'category': str(input_data['category']),
+            'gender': str(input_data['gender']),
+            'city': str(input_data['city']),
+            'state': 'CA',  # Valeur par défaut
+            'city_pop': 50000,  # Valeur par défaut
+            'job': str(input_data['job']),
+            'unix_time': int(now.timestamp()),
             'age': int(input_data['age']),
-            'job': job_mapping.get(input_data['job'], 5),
-            'distance': float(input_data['distance']),
+            'dist_home_merch': float(input_data['distance']),
             'trans_hour': int(input_data['trans_hour']),
-            'is_weekend': 1 if input_data['is_weekend'] else 0
+            'trans_day': int(now.day),
+            'trans_month': int(now.month),
+            'trans_weekday': int(now.weekday()),  # 0=lundi, 6=dimanche
+            'is_weekend': 1 if input_data['is_weekend'] else 0,
+            'amt_log': math.log(float(input_data['amount']) + 1)  # log(amount + 1)
         }
         
-        return features
+        return backend_data
     
     def predict(self, input_data):
         """
@@ -107,22 +106,14 @@ class FraudDetector:
         return self._simulate_prediction(input_data)
     
     def _try_backend_prediction(self, input_data):
-        """Tente une prédiction via l'API backend - STRUCTURE CORRECTE"""
+        """Tente une prédiction via l'API backend - FORMAT CORRIGÉ"""
         try:
+            # Préparer les données dans le format EXACT du backend
+            transaction_data = self._prepare_backend_data(input_data)
+            
             # STRUCTURE CORRECTE pour le backend
             request_data = {
-                'transaction': {
-                    'amount': float(input_data['amount']),
-                    'merchant': str(input_data['merchant']),
-                    'category': str(input_data['category']),
-                    'gender': str(input_data['gender']),
-                    'age': int(input_data['age']),
-                    'job': str(input_data['job']),
-                    'city': str(input_data['city']),
-                    'distance': float(input_data['distance']),
-                    'trans_hour': int(input_data['trans_hour']),
-                    'is_weekend': bool(input_data['is_weekend'])
-                },
+                'transaction': transaction_data,
                 'metadata': {
                     'request_id': f'req_{int(datetime.now().timestamp())}',
                     'timestamp': datetime.now().isoformat(),
@@ -131,6 +122,8 @@ class FraudDetector:
             }
             
             print("📤 Envoi des données au backend...")
+            print(f"🔧 Données envoyées: {json.dumps(request_data, indent=2, default=str)}")
+            
             response = requests.post(
                 self.backend_url,
                 json=request_data,
@@ -139,7 +132,7 @@ class FraudDetector:
             
             if response.status_code == 200:
                 result = response.json()
-                print(f"✅ Backend response: {result}")
+                print(f"✅ Réponse du backend: {result}")
                 return {
                     'success': True,
                     'is_fraud': result.get('is_fraud', False),
@@ -163,14 +156,14 @@ class FraudDetector:
             return {'success': False, 'error': f'Erreur API: {str(e)}'}
     
     def _try_local_prediction(self, input_data):
-        """Tente une prédiction avec le modèle local - VÉRITABLE IMPLÉMENTATION"""
+        """Tente une prédiction avec le modèle local"""
         if not self.is_loaded or self.model is None:
             return {'success': False, 'error': 'Modèle local non disponible'}
         
         try:
-            # Préparer les features pour le modèle
-            features = self._prepare_features(input_data)
-            print(f"🔧 Features préparées: {features}")
+            # Préparer les features pour le modèle local (format différent du backend)
+            features = self._prepare_local_features(input_data)
+            print(f"🔧 Features locales préparées: {features}")
             
             # Convertir en array numpy pour la prédiction
             feature_array = np.array([list(features.values())])
@@ -211,9 +204,38 @@ class FraudDetector:
         except Exception as e:
             print(f"❌ Erreur prédiction locale: {e}")
             return {'success': False, 'error': f'Erreur modèle local: {str(e)}'}
+
+    def _prepare_local_features(self, input_data):
+        """Prépare les features pour le modèle local (format simplifié)"""
+        # Mapping pour le modèle local
+        category_mapping = {
+            "Supermarché": 0, "Restaurant": 1, "Essence": 2,
+            "Shopping/Vêtements": 3, "Pharmacie": 4, "Transport": 5,
+            "Loisirs": 6, "En ligne": 7, "Voyage": 8, "Autre": 9
+        }
+        
+        job_mapping = {
+            "Employé": 0, "Cadre": 1, "Commerçant": 2,
+            "Retraité": 3, "Étudiant": 4, "Autre": 5
+        }
+        
+        gender_mapping = {"Homme": 0, "Femme": 1}
+        
+        features = {
+            'amount': float(input_data['amount']),
+            'category': category_mapping.get(input_data['category'], 9),
+            'gender': gender_mapping.get(input_data['gender'], 0),
+            'age': int(input_data['age']),
+            'job': job_mapping.get(input_data['job'], 5),
+            'distance': float(input_data['distance']),
+            'trans_hour': int(input_data['trans_hour']),
+            'is_weekend': 1 if input_data['is_weekend'] else 0
+        }
+        
+        return features
     
     def _simulate_prediction(self, input_data):
-        """Simulation de prédiction (fallback) - LOGIQUE AMÉLIORÉE"""
+        """Simulation de prédiction (fallback)"""
         print("🔄 Utilisation du mode simulation")
         
         risk_score = 0
@@ -225,7 +247,7 @@ class FraudDetector:
         category = input_data['category']
         is_weekend = input_data['is_weekend']
         
-        # Logique de risque plus réaliste
+        # Logique de risque
         if amount > 2000:
             risk_score += 35
             risk_factors.append("💰 Montant très élevé (>2000€)")
